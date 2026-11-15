@@ -1,0 +1,25 @@
+{
+  "name": "pulsewatch-monorepo",
+  "version": "1.0.0",
+  "description": "PulseWatch — Production-Grade Website & API Monitoring SaaS Platform",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test"
+  },
+  "keywords": [
+    "uptime-monitoring",
+    "synthetics",
+    "api-monitoring",
+    "saas",
+    "recharts",
+    "react",
+    "typescript",
+    "mongodb"
+  ],
+  "author": "PulseWatch Team",
+  "license": "MIT"
+}

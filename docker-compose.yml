@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:7-jammy
+    container_name: pulsewatch_mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - pulsewatch_mongo_data:/data/db
+    networks:
+      - pulsewatch_net
+
+  # PulseWatch Backend API & Monitoring Engine
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsewatch_backend
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongodb:27017/pulsewatch
+      JWT_ACCESS_SECRET: pulsewatch_super_secret_access_key_2026_xyz
+      JWT_REFRESH_SECRET: pulsewatch_super_secret_refresh_key_2026_xyz
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      CORS_ORIGIN: http://localhost
+      EMAIL_FROM: 'PulseWatch Alerts <alerts@pulsewatch.dev>'
+      DEFAULT_CHECK_INTERVAL: 60
+      WORKER_CONCURRENCY: 15
+    ports:
+      - '5000:5000'
+    networks:
+      - pulsewatch_net
+
+  # PulseWatch Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pulsewatch_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+    networks:
+      - pulsewatch_net
+
+volumes:
+  pulsewatch_mongo_data:
+
+networks:
+  pulsewatch_net:
+    driver: bridge

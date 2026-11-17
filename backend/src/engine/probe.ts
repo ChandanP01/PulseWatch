@@ -1,4 +1,5 @@
 import tls from 'tls';
+import net from 'net';
 import { URL } from 'url';
 
 export interface ProbeResult {
@@ -26,11 +27,12 @@ export interface ProbeOptions {
  */
 async function checkSslExpiry(hostname: string, port = 443, timeoutMs = 5000): Promise<number | undefined> {
   return new Promise((resolve) => {
+    const isIp = net.isIP(hostname) !== 0;
     const socket = tls.connect(
       {
         host: hostname,
         port,
-        servername: hostname,
+        ...(isIp ? {} : { servername: hostname }),
         rejectUnauthorized: false, // Probe the cert even if self-signed to calculate expiry
         timeout: timeoutMs,
       },

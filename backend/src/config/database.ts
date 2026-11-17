@@ -1,5 +1,13 @@
+import dns from 'node:dns';
 import mongoose from 'mongoose';
 import { config } from './env.js';
+
+// Configure public DNS resolvers to ensure MongoDB Atlas SRV lookups resolve reliably on all networks
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Ignore if network environment restricts custom DNS
+}
 
 export async function connectDatabase(): Promise<void> {
   try {

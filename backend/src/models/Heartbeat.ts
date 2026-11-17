@@ -26,7 +26,7 @@ const HeartbeatSchema = new Schema<IHeartbeat>(
     tlsHandshakeMs: { type: Number },
     certExpiryDays: { type: Number },
     errorMessage: { type: String },
-    checkedAt: { type: Date, default: Date.now, index: true },
+    checkedAt: { type: Date, default: Date.now },
   },
   { timestamps: false }
 );

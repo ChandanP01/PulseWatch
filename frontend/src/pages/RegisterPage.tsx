@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Activity, Lock, Mail, User, Building, ArrowRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.js';
 
 export const RegisterPage: React.FC = () => {
@@ -19,11 +20,15 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    const toastId = toast.loading('Creating workspace & account...');
     try {
       await register(name, email, password, orgName || undefined);
+      toast.success(`Welcome to PulseWatch, ${name}!`, { id: toastId });
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Registration failed');
+      const errMsg = err.response?.data?.error?.message || err.message || 'Registration failed';
+      setError(errMsg);
+      toast.error(errMsg, { id: toastId });
     } finally {
       setIsLoading(false);
     }

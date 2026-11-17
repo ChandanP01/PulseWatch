@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Activity, Lock, Mail, ArrowRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.js';
 
 export const LoginPage: React.FC = () => {
@@ -17,11 +18,15 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    const toastId = toast.loading('Authenticating...');
     try {
       await login(email, password);
+      toast.success('Welcome back to PulseWatch!', { id: toastId });
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Login failed');
+      const errMsg = err.response?.data?.error?.message || err.message || 'Login failed';
+      setError(errMsg);
+      toast.error(errMsg, { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -30,6 +35,7 @@ export const LoginPage: React.FC = () => {
   const handleFillDemo = () => {
     setEmail('admin@pulsewatch.dev');
     setPassword('Password123!');
+    toast.success('Demo credentials loaded!');
   };
 
   return (

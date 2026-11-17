@@ -9,6 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, orgName?: string) => Promise<void>;
+  updateUser: (updated: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -67,6 +69,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrganization(authOrg);
   };
 
+  const updateUser = (updated: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const nextUser = { ...prev, ...updated };
+      localStorage.setItem('pulsewatch_user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
+  const refreshUser = async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      if (data?.data?.user) {
+        setUser(data.data.user);
+        localStorage.setItem('pulsewatch_user', JSON.stringify(data.data.user));
+      }
+      if (data?.data?.organization) {
+        setOrganization(data.data.organization);
+        localStorage.setItem('pulsewatch_org', JSON.stringify(data.data.organization));
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('pulsewatch_access_token');
     localStorage.removeItem('pulsewatch_refresh_token');
@@ -85,6 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
+        updateUser,
+        refreshUser,
         logout,
       }}
     >

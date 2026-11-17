@@ -10,8 +10,10 @@ import {
   ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Monitor } from '../../types/index.js';
 import { SegmentedHeartbeatBar } from './SegmentedHeartbeatBar.js';
+import { ConfirmModal } from '../common/ConfirmModal.js';
 import { api } from '../../services/api.js';
 
 interface MonitorCardProps {
@@ -23,16 +25,24 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({ monitor, onRefresh }) 
   const [isChecking, setIsChecking] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleCheckNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsChecking(true);
+    const toastId = toast.loading(`Probing ${monitor.name}...`);
     try {
-      await api.post(`/monitors/${monitor._id}/check-now`);
+      const { data } = await api.post(`/monitors/${monitor._id}/check-now`);
+      const res = data.data.probeResult;
+      if (res.isReachable) {
+        toast.success(`Success! Status: ${res.statusCode} (${res.responseTimeMs}ms)`, { id: toastId });
+      } else {
+        toast.error(`Probe failed: ${res.errorMessage || 'HTTP error'}`, { id: toastId });
+      }
       onRefresh();
     } catch (err: any) {
-      alert(`Check failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(err.response?.data?.error?.message || err.message, { id: toastId });
     } finally {
       setIsChecking(false);
     }
@@ -44,25 +54,25 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({ monitor, onRefresh }) 
     setIsToggling(true);
     try {
       await api.patch(`/monitors/${monitor._id}/toggle`);
+      toast.success(monitor.isActive ? `Paused ${monitor.name}` : `Resumed ${monitor.name}`);
       onRefresh();
     } catch (err: any) {
-      alert(`Toggle failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Toggle failed: ${err.response?.data?.error?.message || err.message}`);
     } finally {
       setIsToggling(false);
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete monitor "${monitor.name}"?`)) return;
-
+  const handleConfirmDelete = async () => {
     setIsDeleting(true);
+    const toastId = toast.loading(`Deleting ${monitor.name}...`);
     try {
       await api.delete(`/monitors/${monitor._id}`);
+      toast.success('Monitor deleted successfully', { id: toastId });
+      setShowDeleteModal(false);
       onRefresh();
     } catch (err: any) {
-      alert(`Delete failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Delete failed: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
     } finally {
       setIsDeleting(false);
     }
@@ -73,7 +83,8 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({ monitor, onRefresh }) 
   const isPaused = !monitor.isActive || monitor.currentStatus === 'PAUSED';
 
   return (
-    <div className="group relative rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700 hover:bg-slate-900/90 transition-all shadow-sm">
+    <>
+      <div className="group relative rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700 hover:bg-slate-900/90 transition-all shadow-sm">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left: Status & Identity */}
         <div className="flex items-start gap-3.5 min-w-0">
@@ -184,7 +195,11 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({ monitor, onRefresh }) 
             </button>
 
             <button
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowDeleteModal(true);
+              }}
               disabled={isDeleting}
               title="Delete monitor"
               className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
@@ -211,5 +226,18 @@ export const MonitorCard: React.FC<MonitorCardProps> = ({ monitor, onRefresh }) 
         <SegmentedHeartbeatBar barsCount={36} />
       </div>
     </div>
+
+    {/* Custom Delete Confirmation Modal */}
+    <ConfirmModal
+      isOpen={showDeleteModal}
+      title="Delete Monitor?"
+      message="Are you sure you want to delete this endpoint? All historical heartbeats, uptime telemetry, and incident history will be permanently wiped."
+      itemName={`${monitor.name} (${monitor.url})`}
+      confirmText="Yes, Delete Monitor"
+      isLoading={isDeleting}
+      onConfirm={handleConfirmDelete}
+      onClose={() => setShowDeleteModal(false)}
+    />
+  </>
   );
 };

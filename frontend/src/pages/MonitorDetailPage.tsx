@@ -25,7 +25,9 @@ import {
 } from 'recharts';
 import { Monitor, Heartbeat, Incident } from '../types/index.js';
 import { SegmentedHeartbeatBar } from '../components/monitors/SegmentedHeartbeatBar.js';
+import { ConfirmModal } from '../components/common/ConfirmModal.js';
 import { api } from '../services/api.js';
+import toast from 'react-hot-toast';
 
 export const MonitorDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +38,8 @@ export const MonitorDetailPage: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const fetchDetails = async () => {
     try {
@@ -70,11 +74,18 @@ export const MonitorDetailPage: React.FC = () => {
 
   const handleCheckNow = async () => {
     setIsChecking(true);
+    const toastId = toast.loading(`Probing ${monitor?.name || 'endpoint'}...`);
     try {
-      await api.post(`/monitors/${id}/check-now`);
+      const { data } = await api.post(`/monitors/${id}/check-now`);
+      const res = data.data.probeResult;
+      if (res.isReachable) {
+        toast.success(`Success! HTTP ${res.statusCode} in ${res.responseTimeMs}ms`, { id: toastId });
+      } else {
+        toast.error(`Probe failed: ${res.errorMessage || 'HTTP failure'}`, { id: toastId });
+      }
       await fetchDetails();
     } catch (err: any) {
-      alert(`Check failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Check failed: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
     } finally {
       setIsChecking(false);
     }
@@ -83,19 +94,23 @@ export const MonitorDetailPage: React.FC = () => {
   const handleToggle = async () => {
     try {
       await api.patch(`/monitors/${id}/toggle`);
+      toast.success(monitor?.isActive ? 'Monitor paused' : 'Monitor resumed');
       await fetchDetails();
     } catch (err: any) {
-      alert(`Toggle failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Toggle failed: ${err.response?.data?.error?.message || err.message}`);
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this monitor?')) return;
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    const toastId = toast.loading('Deleting monitor and metrics...');
     try {
       await api.delete(`/monitors/${id}`);
+      toast.success('Monitor deleted successfully', { id: toastId });
       navigate('/');
     } catch (err: any) {
-      alert(`Delete failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Delete failed: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
+      setIsDeleting(false);
     }
   };
 
@@ -232,7 +247,7 @@ export const MonitorDetailPage: React.FC = () => {
             </button>
 
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteModal(true)}
               className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium transition-colors border border-rose-500/30"
               title="Delete monitor"
             >
@@ -396,6 +411,18 @@ export const MonitorDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Monitor Permanently?"
+        message="Are you sure you want to delete this monitor? All collected latency metrics, SSL monitoring logs, and incident records will be deleted forever."
+        itemName={`${monitor.name} (${monitor.url})`}
+        confirmText="Delete Monitor"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 };

@@ -88,6 +88,7 @@ export async function registerUser(params: {
       email: user.email,
       name: user.name,
       role: user.role,
+      avatarUrl: user.avatarUrl,
     },
     organization: {
       id: organization._id,
@@ -135,6 +136,7 @@ export async function loginUser(params: {
       email: user.email,
       name: user.name,
       role: user.role,
+      avatarUrl: user.avatarUrl,
     },
     organization: organization
       ? {
@@ -169,4 +171,101 @@ export async function refreshAccessToken(refreshToken: string) {
   } catch (err: any) {
     throw new AppError('Invalid or expired refresh token', 401);
   }
+}
+
+export async function updateUserProfile(
+  userId: string,
+  params: {
+    name?: string;
+    avatarUrl?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  },
+  ipAddress?: string
+) {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (params.name && params.name.trim().length >= 2) {
+    user.name = params.name.trim();
+  }
+
+  if (params.avatarUrl !== undefined) {
+    user.avatarUrl = params.avatarUrl;
+  }
+
+  if (params.newPassword) {
+    if (!params.currentPassword) {
+      throw new AppError('Current password is required to set a new password', 400);
+    }
+    const isMatch = await bcrypt.compare(params.currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new AppError('Current password does not match', 400);
+    }
+    if (params.newPassword.length < 6) {
+      throw new AppError('New password must be at least 6 characters', 400);
+    }
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(params.newPassword, salt);
+  }
+
+  await user.save();
+
+  await logAuditEvent({
+    orgId: user.orgId,
+    userId: user._id,
+    action: 'USER_PROFILE_UPDATED',
+    details: { name: user.name, avatarChanged: !!params.avatarUrl },
+    ipAddress,
+  });
+
+  const organization = await Organization.findById(user.orgId);
+
+  return {
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+    },
+    organization: organization
+      ? {
+          id: organization._id,
+          name: organization.name,
+          slug: organization.slug,
+          plan: organization.plan,
+        }
+      : null,
+  };
+}
+
+export async function getUserProfile(userId: string) {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+  const organization = await Organization.findById(user.orgId);
+  return {
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+    },
+    organization: organization
+      ? {
+          id: organization._id,
+          name: organization.name,
+          slug: organization.slug,
+          plan: organization.plan,
+          maxMonitors: organization.maxMonitors,
+          createdAt: organization.createdAt,
+        }
+      : null,
+  };
 }

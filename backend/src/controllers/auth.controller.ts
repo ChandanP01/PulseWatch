@@ -51,9 +51,30 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
   }
 }
 
+export const updateProfileSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters long').optional(),
+  avatarUrl: z.string().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters').optional(),
+});
+
+export async function updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await authService.updateUserProfile(
+      req.user!.userId,
+      req.body,
+      req.ip
+    );
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json({ success: true, data: { user: req.user } });
+    const result = await authService.getUserProfile(req.user!.userId);
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

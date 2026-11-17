@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Shield, Trash2, Mail, Check, X, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { User, UserRole } from '../types/index.js';
 import { useAuth } from '../context/AuthContext.js';
+import { ConfirmModal } from '../components/common/ConfirmModal.js';
 import { api } from '../services/api.js';
 
 export const TeamPage: React.FC = () => {
@@ -17,6 +19,8 @@ export const TeamPage: React.FC = () => {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
 
   const fetchMembers = async () => {
     try {
@@ -39,6 +43,7 @@ export const TeamPage: React.FC = () => {
     setError(null);
     setTempPassword(null);
 
+    const toastId = toast.loading('Sending invitation...');
     try {
       const { data } = await api.post('/team/invite', {
         name: inviteName,
@@ -49,30 +54,41 @@ export const TeamPage: React.FC = () => {
       setTempPassword(data.data.temporaryPassword);
       setInviteName('');
       setInviteEmail('');
+      toast.success('Invitation generated!', { id: toastId });
       await fetchMembers();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to invite member');
+      const errMsg = err.response?.data?.error?.message || err.message || 'Failed to invite member';
+      setError(errMsg);
+      toast.error(errMsg, { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleRoleChange = async (targetId: string, newRole: UserRole) => {
+    const toastId = toast.loading('Updating role...');
     try {
       await api.patch(`/team/${targetId}/role`, { role: newRole });
+      toast.success(`Role updated to ${newRole}`, { id: toastId });
       await fetchMembers();
     } catch (err: any) {
-      alert(`Failed to change role: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Failed to change role: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
     }
   };
 
-  const handleRemove = async (targetId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to remove ${name} from the team?`)) return;
+  const handleConfirmRemove = async () => {
+    if (!memberToDelete) return;
+    setIsDeletingMember(true);
+    const toastId = toast.loading(`Removing ${memberToDelete.name}...`);
     try {
-      await api.delete(`/team/${targetId}`);
+      await api.delete(`/team/${memberToDelete.id}`);
+      toast.success('Team member removed', { id: toastId });
+      setMemberToDelete(null);
       await fetchMembers();
     } catch (err: any) {
-      alert(`Failed to remove member: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Failed to remove: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
+    } finally {
+      setIsDeletingMember(false);
     }
   };
 
@@ -182,7 +198,7 @@ export const TeamPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       {member.role !== 'owner' && member.id !== currentUser?.id && (
                         <button
-                          onClick={() => handleRemove(member.id, member.name)}
+                          onClick={() => setMemberToDelete({ id: member.id, name: member.name })}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
                           title="Remove from team"
                         >
@@ -299,6 +315,18 @@ export const TeamPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Remove Member Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!memberToDelete}
+        title="Remove Team Member?"
+        message="Are you sure you want to remove this user from your team? They will immediately lose access to all monitors, incidents, and team data."
+        itemName={memberToDelete?.name}
+        confirmText="Remove Member"
+        isLoading={isDeletingMember}
+        onConfirm={handleConfirmRemove}
+        onClose={() => setMemberToDelete(null)}
+      />
     </div>
   );
 };

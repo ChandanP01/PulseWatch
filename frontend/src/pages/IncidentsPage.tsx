@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, ShieldAlert, Check, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Incident } from '../types/index.js';
 import { api } from '../services/api.js';
 
@@ -28,11 +29,13 @@ export const IncidentsPage: React.FC = () => {
 
   const handleAcknowledge = async (incidentId: string) => {
     setAcknowledgingId(incidentId);
+    const toastId = toast.loading('Acknowledging incident...');
     try {
       await api.post(`/incidents/${incidentId}/acknowledge`);
+      toast.success('Incident marked as Investigating', { id: toastId });
       await fetchIncidents();
     } catch (err: any) {
-      alert(`Acknowledge failed: ${err.response?.data?.error?.message || err.message}`);
+      toast.error(`Acknowledge failed: ${err.response?.data?.error?.message || err.message}`, { id: toastId });
     } finally {
       setAcknowledgingId(null);
     }

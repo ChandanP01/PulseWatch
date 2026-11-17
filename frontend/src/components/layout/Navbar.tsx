@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { Activity, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Activity, LogOut, Settings, User } from 'lucide-react';
 
 interface NavbarProps {
   activeIncidentsCount?: number;
@@ -11,8 +12,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeIncidentsCount = 0 }) => {
 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-900/70 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-40">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-lg shadow-sky-500/20">
+      <Link to="/" className="flex items-center gap-3 group">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform">
           <Activity className="w-5 h-5 text-white animate-pulse" />
         </div>
         <div>
@@ -23,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeIncidentsCount = 0 }) => {
             SaaS
           </span>
         </div>
-      </div>
+      </Link>
 
       <div className="flex items-center gap-4">
         {/* System Health Badge */}
@@ -41,19 +42,37 @@ export const Navbar: React.FC<NavbarProps> = ({ activeIncidentsCount = 0 }) => {
 
         {/* User / Org Info */}
         <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
-          <div className="text-right hidden md:block">
-            <div className="text-sm font-medium text-slate-200">{user?.name}</div>
-            <div className="text-xs text-slate-400 flex items-center justify-end gap-1">
-              <span>{organization?.name || 'My Team'}</span>
-              <span className="text-[10px] uppercase font-semibold text-sky-400 bg-slate-800 px-1 rounded">
-                {user?.role}
-              </span>
+          <Link to="/settings" className="flex items-center gap-3 group text-left">
+            <div className="text-right hidden md:block">
+              <div className="text-sm font-medium text-slate-200 group-hover:text-sky-400 transition-colors">
+                {user?.name}
+              </div>
+              <div className="text-xs text-slate-400 flex items-center justify-end gap-1">
+                <span>{organization?.name || 'My Team'}</span>
+                <span className="text-[10px] uppercase font-semibold text-sky-400 bg-slate-800 px-1 rounded">
+                  {user?.role}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-semibold text-xs">
-            {user?.name ? user.name.slice(0, 2).toUpperCase() : <User className="w-4 h-4" />}
-          </div>
+            <div className="w-9 h-9 rounded-full bg-slate-800 border-2 border-slate-700 group-hover:border-sky-500 transition-all flex items-center justify-center text-slate-300 font-semibold text-xs overflow-hidden shadow-md">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : user?.name ? (
+                user.name.slice(0, 2).toUpperCase()
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </div>
+          </Link>
+
+          <Link
+            to="/settings"
+            title="Profile & Settings"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
 
           <button
             onClick={logout}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Globe, Shield, Clock, Hash, Code, Plus, Trash2 } from 'lucide-react';
+import { X, Globe, Plus, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { api } from '../../services/api.js';
 
 interface CreateMonitorModalProps {
@@ -68,10 +69,13 @@ export const CreateMonitorModal: React.FC<CreateMonitorModalProps> = ({
         headers: Object.keys(headersObj).length > 0 ? headersObj : undefined,
       });
 
+      toast.success(`Monitor "${name}" created and initial probe triggered!`);
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to create monitor');
+      const errMsg = err.response?.data?.error?.message || err.message || 'Failed to create monitor';
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }

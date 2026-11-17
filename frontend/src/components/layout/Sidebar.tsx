@@ -5,7 +5,7 @@ import {
   AlertTriangle,
   Users,
   ScrollText,
-  Activity,
+  Settings,
   Server,
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -36,6 +36,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeIncidentsCount = 0 }) =>
       to: '/audit',
       label: 'Audit Trail',
       icon: ScrollText,
+    },
+    {
+      to: '/settings',
+      label: 'Profile & Settings',
+      icon: Settings,
     },
   ];
 
